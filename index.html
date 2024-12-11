@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guest List RSVP</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+    <section class="section">
+        <div class="container">
+            <h1 class="title">Guest List RSVP</h1>
+            <p class="subtitle">Upload your guest list and manage RSVPs easily.</p>
+
+            <div class="file has-name is-boxed">
+                <label class="file-label">
+                    <input class="file-input" type="file" id="fileInput" accept=".xlsx, .xls">
+                    <span class="file-cta">
+                        <span class="file-icon">
+                            <i class="fas fa-upload"></i>
+                        </span>
+                        <span class="file-label">Choose a file…</span>
+                    </span>
+                    <span class="file-name" id="fileName">No file selected</span>
+                </label>
+            </div>
+
+            <div id="guestList" class="mt-5"></div>
+
+            <div id="adminActions" class="mt-5">
+                <button class="button is-success" id="downloadUpdatedList">Download Updated Guest List</button>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const guestList = document.getElementById('guestList');
+        const downloadButton = document.getElementById('downloadUpdatedList');
+
+        let guestData = [];
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+
+            // Validate file type and size
+            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+                alert('Invalid file type. Please upload an Excel file.');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                alert('File size exceeds the 5MB limit. Please upload a smaller file.');
+                return;
+            }
+
+            fileName.textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+
+                guestData = XLSX.utils.sheet_to_json(worksheet);
+                renderGuestList(guestData);
+            };
+
+            reader.readAsArrayBuffer(file);
+        });
+
+        function renderGuestList(data) {
+            guestList.innerHTML = '';
+            data.forEach((row, index) => {
+                const card = document.createElement('div');
+                card.className = 'card mb-3';
+                card.innerHTML = `
+                    <div class="card-content">
+                        <p><strong>Group ID:</strong> ${row.GroupID || 'N/A'}</p>
+                        <p><strong>Name:</strong> ${row.Name}</p>
+                        <p><strong>RSVP:</strong> ${row.RSVP || 'Pending'}</p>
+                        <div class="buttons mt-3">
+                            <button class="button is-primary" onclick="updateRSVP(${index}, 'Yes')">Confirm</button>
+                            <button class="button is-warning" onclick="updateRSVP(${index}, 'No')">Decline</button>
+                        </div>
+                    </div>
+                `;
+                guestList.appendChild(card);
+            });
+        }
+
+        function updateRSVP(index, status) {
+            guestData[index].RSVP = status;
+            renderGuestList(guestData);
+        }
+
+        downloadButton.addEventListener('click', () => {
+            const updatedSheet = XLSX.utils.json_to_sheet(guestData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, updatedSheet, 'UpdatedGuestList');
+
+            XLSX.writeFile(workbook, 'UpdatedGuestList.xlsx');
+        });
+    </script>
+</body>
+</html>
