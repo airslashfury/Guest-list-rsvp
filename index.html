@@ -3,159 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guest List RSVP</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.4/css/bulma.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <title>You are coordially invited</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+        }
+        .envelope-front, .envelope-back, .envelope-open, .invitation, .gatefold {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+        }
+        .envelope-front {
+            background-image: url('front-envelope.jpg');
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .envelope-back {
+            background-image: url('back-envelope.jpg');
+            transform: rotateY(180deg);
+            display: none;
+        }
+        .envelope-open {
+            background-image: url('open-envelope.jpg');
+            display: none;
+        }
+        .invitation {
+            background-image: url('invitation.jpg');
+            transform: rotate(90deg);
+            display: none;
+        }
+        .gatefold {
+            background-image: url('gatefold.jpg');
+            display: none;
+        }
+    </style>
 </head>
 <body>
-    <section class="section">
-        <div class="container">
-            <h1 class="title">Guest List RSVP</h1>
-            <p class="subtitle">Upload your guest list and manage RSVPs easily.</p>
-
-            <div id="adminConsole" class="box">
-                <h2 class="title is-4">Admin Console</h2>
-                <div class="file has-name is-boxed">
-                    <label class="file-label">
-                        <input class="file-input" type="file" id="fileInput" accept=".xlsx, .xls">
-                        <span class="file-cta">
-                            <span class="file-icon">
-                                <i class="fas fa-upload"></i>
-                            </span>
-                            <span class="file-label">Choose a file…</span>
-                        </span>
-                        <span class="file-name" id="fileName">No file selected</span>
-                    </label>
-                </div>
-
-                <button class="button is-primary mt-3" id="downloadTemplate">Download Excel Template</button>
-
-                <div class="mt-5">
-                    <button class="button is-link" id="toggleGuestList">Toggle Guest List View</button>
-                </div>
-            </div>
-
-            <div id="guestList" class="mt-5" style="display: none;"></div>
-
-            <div id="adminActions" class="mt-5">
-                <button class="button is-success" id="downloadUpdatedList">Download Updated Guest List</button>
-            </div>
-        </div>
-    </section>
-
+    <div class="container">
+        <div class="envelope-front">Recipient Name</div>
+        <div class="envelope-back"></div>
+        <div class="envelope-open"></div>
+        <div class="invitation"></div>
+        <div class="gatefold"></div>
+    </div>
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
-        const guestList = document.getElementById('guestList');
-        const downloadButton = document.getElementById('downloadUpdatedList');
-        const downloadTemplateButton = document.getElementById('downloadTemplate');
-        const toggleGuestListButton = document.getElementById('toggleGuestList');
-
-        let guestData = [];
-
-        // Toggle guest list view
-        toggleGuestListButton.addEventListener('click', () => {
-            guestList.style.display = guestList.style.display === 'none' ? 'block' : 'none';
-        });
-
-        // File upload and validation
-        fileInput.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-
-            // Validate file type and size
-            if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-                alert('Invalid file type. Please upload an Excel file.');
-                return;
-            }
-
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                alert('File size exceeds the 5MB limit. Please upload a smaller file.');
-                return;
-            }
-
-            fileName.textContent = file.name;
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-
-                guestData = XLSX.utils.sheet_to_json(worksheet);
-                renderGuestList(guestData);
-            };
-
-            reader.readAsArrayBuffer(file);
-        });
-
-        // Render guest list dynamically
-        function renderGuestList(data) {
-            guestList.innerHTML = '';
-            data.forEach((row, index) => {
-                const card = document.createElement('div');
-                card.className = 'card mb-3';
-                const confirmButton = document.createElement('button');
-                const declineButton = document.createElement('button');
-
-                confirmButton.className = 'button is-primary';
-                confirmButton.textContent = 'Confirm';
-                confirmButton.addEventListener('click', () => updateRSVP(index, 'Yes'));
-
-                declineButton.className = 'button is-warning';
-                declineButton.textContent = 'Decline';
-                declineButton.addEventListener('click', () => updateRSVP(index, 'No'));
-
-                card.innerHTML = `
-                    <div class="card-content">
-                        <p><strong>Group ID:</strong> ${row.GroupID || 'N/A'}</p>
-                        <p><strong>Name:</strong> ${row.FirstName} ${row.LastName}</p>
-                        <p><strong>Phone:</strong> ${row.Phone || 'N/A'}</p>
-                        <p><strong>RSVP:</strong> ${row.RSVP || 'Pending'}</p>
-                    </div>
-                `;
-                const buttonContainer = document.createElement('div');
-                buttonContainer.className = 'buttons mt-3';
-                buttonContainer.appendChild(confirmButton);
-                buttonContainer.appendChild(declineButton);
-                card.appendChild(buttonContainer);
-
-                guestList.appendChild(card);
-            });
-        }
-
-        // Update RSVP status
-        function updateRSVP(index, status) {
-            guestData[index].RSVP = status;
-            renderGuestList(guestData);
-        }
-
-        // Download updated guest list
-        downloadButton.addEventListener('click', () => {
-            if (!Array.isArray(guestData) || guestData.length === 0 || typeof guestData[0] !== 'object') {
-                alert('Guest data is not in the expected format. Please upload a valid file.');
-                return;
-            }
-
-            const updatedSheet = XLSX.utils.json_to_sheet(guestData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, updatedSheet, 'UpdatedGuestList');
-
-            XLSX.writeFile(workbook, 'UpdatedGuestList.xlsx');
-        });
-
-        // Download template for Excel
-        downloadTemplateButton.addEventListener('click', () => {
-            const templateData = [
-                { FirstName: 'John', LastName: 'Doe', Phone: '1234567890', GroupID: 'Household1' },
-                { FirstName: 'Jane', LastName: 'Smith', Phone: '', GroupID: 'Household2' }
-            ];
-            const templateSheet = XLSX.utils.json_to_sheet(templateData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, templateSheet, 'GuestTemplate');
-
-            XLSX.writeFile(workbook, 'GuestListTemplate.xlsx');
-        });
+        gsap.to(".envelope-front", {duration: 1, rotationY: 180, onComplete: function() {
+            document.querySelector(".envelope-front").style.display = "none";
+            document.querySelector(".envelope-back").style.display = "block";
+            gsap.to(".envelope-back", {duration: 1, rotationY: 0, onComplete: function() {
+                document.querySelector(".envelope-back").style.display = "none";
+                document.querySelector(".envelope-open").style.display = "block";
+                gsap.to(".invitation", {duration: 1, display: "block", rotation: 0, y: -50, onComplete: function() {
+                    gsap.to(".envelope-open", {duration: 1, opacity: 0});
+                    gsap.to(".invitation", {duration: 1, scaleX: 0.5, onComplete: function() {
+                        document.querySelector(".gatefold").style.display = "block";
+                        gsap.to(".gatefold", {duration: 1, scaleX: 1});
+                    }});
+                }});
+            }});
+        }});
     </script>
 </body>
 </html>
